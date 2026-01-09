@@ -200,6 +200,47 @@ Where:
 | TPSA | 140 | Topological polar surface area |
 | RotB | 10 | Rotatable bonds |
 
+## Design Notes
+
+### Scoring Approach
+
+The scoring function `Score = QED - (0.1 × violations)` was chosen because:
+
+1. **QED as primary metric**: QED (Quantitative Estimate of Drug-likeness) provides a single 0-1 score incorporating multiple drug-like properties (MW, LogP, HBD, HBA, TPSA, RotB, PSA, and aromaticity).
+
+2. **Violation penalty**: Each filter violation reduces the score by 0.1, allowing molecules with minor violations (≤1) to remain competitive while penalizing those with many violations.
+
+3. **Simple and interpretable**: Unlike complex ML models, this formula is transparent and easily explainable to medicinal chemists.
+
+### Architectural Decisions
+
+| Decision | Rationale |
+|----------|-----------|
+| **Deterministic agents** (not LLM-backed) | Reproducibility, no API latency, easier testing |
+| **SMARTS-based mutations** | Chemically valid transformations, real medicinal chemistry modifications |
+| **Celery + Redis** | Industry-standard async processing, horizontal scaling |
+| **PostgreSQL + JSONB** | Flexible schema for run configs, structured data for molecules |
+| **Idempotent tasks** | Safe retries, prevents duplicate processing |
+
+### Mutation Library
+
+The Generator uses reaction SMARTS for molecular modifications:
+
+| Mutation | SMARTS | Purpose |
+|----------|--------|---------|
+| F↔Cl swap | `[#6:1][F]>>[#6:1][Cl]` | Adjust lipophilicity |
+| Aromatic methylation | `[c:1][H]>>[c:1]C` | Block metabolic sites |
+| OH↔OCH3 | `[#6:1][OH]>>[#6:1][OCH3]` | Modify H-bonding |
+| Benzene→Pyridine | Ring N substitution | Scaffold hopping |
+
+### CNS Drug Discovery Context
+
+For Parkinson's disease therapeutics, molecules must cross the Blood-Brain Barrier (BBB). Key constraints:
+
+- **TPSA < 90 Å²**: Critical for BBB penetration
+- **MW < 450 Da**: Smaller molecules diffuse better
+- **LogP 2-4**: Balance between membrane permeability and solubility
+
 ## License
 
 MIT License
