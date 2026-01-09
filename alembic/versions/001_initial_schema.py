@@ -17,13 +17,16 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Create run_status enum
-    run_status_enum = postgresql.ENUM(
-        "PENDING", "RUNNING", "COMPLETED", "FAILED",
-        name="runstatus",
-        create_type=True,
-    )
-    run_status_enum.create(op.get_bind(), checkfirst=True)
+    # Create run_status enum using raw SQL with IF NOT EXISTS
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'runstatus') THEN
+                CREATE TYPE runstatus AS ENUM ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED');
+            END IF;
+        END
+        $$;
+    """)
 
     # Create discovery_runs table
     op.create_table(
@@ -31,7 +34,7 @@ def upgrade() -> None:
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True),
         sa.Column(
             "status",
-            run_status_enum,
+            postgresql.ENUM("PENDING", "RUNNING", "COMPLETED", "FAILED", name="runstatus", create_type=False),
             nullable=False,
             server_default="PENDING",
         ),

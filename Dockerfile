@@ -8,11 +8,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy all application files
-COPY . .
+# Copy requirements first for caching
+COPY requirements.txt .
 
-# Install dependencies (non-editable for production)
-RUN pip install --no-cache-dir .
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
 
 # Expose port
 EXPOSE 8000
