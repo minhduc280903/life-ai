@@ -8,14 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY pyproject.toml .
-
-# Install dependencies
-RUN pip install --no-cache-dir -e .
-
-# Copy application code
+# Copy all application files
 COPY . .
+
+# Install dependencies (non-editable for production)
+RUN pip install --no-cache-dir .
 
 # Expose port
 EXPOSE 8000
